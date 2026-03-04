@@ -30,6 +30,27 @@ This folder is home. Treat it that way.
 - Nightly: `node scripts/security_scanner.js --audit-system` (via Heartbeat).
 - Check `HEARTBEAT.md` for scheduled tasks.
 
+## 🤖 Model & Cost Policy (Mandatory)
+
+**1. Default Model:** `gemini-1.5-flash` or `gemini-1.5-pro`
+- **Why:** Faster, cheaper, higher rate limits.
+- **Use for:** General conversation, monitoring, summaries, drafting, coding.
+
+**2. Advanced Model:** `claude-3-5-sonnet` or `gpt-4o`
+- **Use ONLY for:**
+    - Complex math / logic puzzles.
+    - Nuanced creative writing where tone is critical.
+    - Deep code refactoring (if Flash fails).
+    - When the user explicitly requests "smarter" or "better" reasoning.
+
+**3. Search & Context Consolidation**
+- **Do NOT** make individual API calls for every search result.
+- **DO:**
+    1. Gather all search results (Brave, X, etc.).
+    2. Consolidate them into a single context block.
+    3. Process/Summarize in **ONE** LLM call.
+- **Goal:** Minimize token overhead and API round-trips.
+
 ## 👥 Agent Configuration
 
 The following hierarchy defines your role and the sub-agents you can spawn or direct.
