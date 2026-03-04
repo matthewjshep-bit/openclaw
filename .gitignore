@@ -1,2 +1,8 @@
+.env
+client_secret.json
+*.log
+backups/
 node_modules/
 .DS_Store
+usage.db
+memory/heartbeat-state.json
