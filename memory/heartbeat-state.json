@@ -5,6 +5,8 @@
     "dailyCheck": 1772647091000,
     "memorySynthesis": null,
     "integrityDrill": 1772647240000,
-    "backup": 1772656910000
+    "backup": 1772663000000,
+    "usageSync": 1772663000000,
+    "gitSync": 1772663000000
   }
 }
