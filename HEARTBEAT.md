@@ -15,3 +15,6 @@
 - Run `node scripts/backup_workspace.js` hourly.
 - Run `scripts/sync_git_workspace.sh` hourly (offset by 5 mins).
 - Run `node scripts/integrity_drill.js` daily.
+
+# Analyst Briefings (2x Daily)
+- Run `node scripts/analyst_daily_brief.js` at 9:00 AM and 5:00 PM.
