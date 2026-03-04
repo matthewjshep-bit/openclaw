@@ -4,6 +4,7 @@
     "securityAudit": 1772647069000,
     "dailyCheck": 1772647091000,
     "memorySynthesis": null,
-    "integrityDrill": 1772647240000
+    "integrityDrill": 1772647240000,
+    "backup": 1772650836000
   }
 }
