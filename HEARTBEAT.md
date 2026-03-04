@@ -9,4 +9,9 @@
 
 # Usage Tracking (Daily)
 - Run `node scripts/usage_dashboard.js dashboard` to see daily spend.
-- Run `node scripts/usage_dashboard.js sync` to import framework logs (if available).
+- Run `node scripts/usage_dashboard.js sync` to import framework logs.
+
+# Backup & Recovery (Hourly)
+- Run `node scripts/backup_workspace.js` hourly.
+- Run `scripts/sync_git_workspace.sh` hourly (offset by 5 mins).
+- Run `node scripts/integrity_drill.js` daily.
