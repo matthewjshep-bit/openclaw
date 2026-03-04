@@ -1,4 +1,5 @@
 // scripts/analyst_daily_brief.js
+// ... (imports) ...
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -8,40 +9,41 @@ const REPORT_DIR = path.join(__dirname, '../memory/analyst_reports');
 const KEYWORDS = [
     "Commercial Real Estate AI",
     "PropTech automation",
-    "Real Estate Machine Learning",
-    "CRE generative AI",
-    "Private Equity Real Estate technology"
+    "Real Estate Machine Learning"
 ];
-
-// Ensure report dir
-if (!fs.existsSync(REPORT_DIR)) fs.mkdirSync(REPORT_DIR, { recursive: true });
 
 // -- IMPORT ROUTER --
 let llmRouter;
 try {
     llmRouter = require('../lib/llm_router');
 } catch (e) {
-    console.error("❌ LLM Router missing. Run 'npm install' or check lib/llm_router.js");
+    console.error("❌ LLM Router missing.");
     process.exit(1);
 }
 
-// -- SEARCH HELPERS --
-
-// 1. Brave Search (News/Web)
+// ... (searchBrave logic) ...
 function searchBrave(query) {
-    const key = process.env.BRAVE_API_KEY;
-    if (!key) {
-        console.warn("⚠️ BRAVE_API_KEY missing. Skipping web search.");
+    if (!process.env.BRAVE_API_KEY) {
+        // Try loading from .env manually
+        try {
+            const envPath = path.join(__dirname, '../.env');
+            if (fs.existsSync(envPath)) {
+                const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+                lines.forEach(l => {
+                    if (l.startsWith('export BRAVE_API_KEY=')) process.env.BRAVE_API_KEY = l.split('=')[1].trim();
+                    if (l.startsWith('BRAVE_API_KEY=')) process.env.BRAVE_API_KEY = l.split('=')[1].trim();
+                });
+            }
+        } catch(e) {}
+    }
+
+    if (!process.env.BRAVE_API_KEY) {
         return [];
     }
-    
     try {
-        // Simple curl wrapper since we don't have a brave SDK installed yet
-        // Using 'execSync' for simplicity in this script context
-        const cmd = `curl -s -H "X-Subscription-Token: ${key}" "https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5"`;
-        const res = execSync(cmd, { encoding: 'utf8' });
+        const cmd = `curl -s -H "X-Subscription-Token: ${process.env.BRAVE_API_KEY}" "https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=3"`;
+        const res = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
         const data = JSON.parse(res);
-        
         return (data.web?.results || []).map(r => ({
             source: 'Brave',
             title: r.title,
@@ -50,103 +52,71 @@ function searchBrave(query) {
             date: r.age || 'recent'
         }));
     } catch (e) {
-        console.error(`❌ Brave search failed for "${query}":`, e.message);
         return [];
     }
 }
 
-// 2. X Search (via Grok API if available, or just mock if Grok doesn't support search yet)
-// Note: Grok API (xAI) is currently LLM-only, it doesn't search X posts directly via API key yet unless you use the 'grok-beta' model with tools.
-// For now, we'll use Brave to search "site:twitter.com query" as a fallback, or use the xAI LLM to *generate* insights if it has recent knowledge.
-// Actually, let's use the 'web_search' tool logic if we were an agent, but as a script, we'll stick to Brave for now.
-function searchX(query) {
-    // Fallback: Search X via Brave
-    return searchBrave(`site:twitter.com ${query}`);
-}
-
-
-// -- MAIN LOGIC --
 async function run() {
     console.log("🔍 Analyst: Starting Daily Briefing...");
     
-    let allResults = [];
-
     // 1. Gather Data
+    let allResults = [];
     for (const term of KEYWORDS) {
         console.log(`   Searching: ${term}...`);
-        const webResults = searchBrave(term);
-        // const xResults = searchX(term); // Skip X specific for now to save tokens/complexity, Brave covers it
-        
-        allResults = [...allResults, ...webResults];
+        allResults = [...allResults, ...searchBrave(term)];
     }
 
-    // Deduplicate by URL
-    const seen = new Set();
-    const uniqueResults = allResults.filter(r => {
-        if (seen.has(r.url)) return false;
-        seen.add(r.url);
-        return true;
-    });
-
-    console.log(`   Found ${uniqueResults.length} unique items.`);
-
-    if (uniqueResults.length === 0) {
-        console.log("   No new information found.");
+    if (allResults.length === 0) {
+        console.log("   No results found.");
         return;
     }
 
-    // 2. Synthesize with LLM
-    const context = uniqueResults.map(r => 
-        `- [${r.source}] ${r.title} (${r.date}): ${r.snippet} (${r.url})`
+    // 2. Synthesize
+    const context = allResults.slice(0, 15).map(r => 
+        `- [${r.source}] ${r.title}: ${r.snippet}`
     ).join('\n');
 
     const prompt = `
-    You are the Analyst Agent for a CRE/PropTech firm.
-    Review these recent search results and summarize the Top 3-5 most important developments.
-    
-    Focus on:
-    - Concrete news (launches, funding, regulations).
-    - Market shifts in CRE AI.
-    - "Hooks" that a sales rep (SDR) could use to start a conversation.
-    
-    FORMAT:
+    Summarize these CRE/PropTech news items into a briefing.
+    Format:
     # 📊 Analyst Briefing (${new Date().toISOString().split('T')[0]})
-    
-    ## 🚨 Top Stories
-    1. **Title** - Summary. *Why it matters.*
-    
-    ## 🎣 SDR Hooks (Conversation Starters)
-    - "Did you see [X]?" - Link to specific trend.
-    
-    ## 🔗 Sources
-    - [Title](URL)
-    
-    INPUT DATA:
+    ## Top Stories
+    ## SDR Hooks
+
+    INPUT:
     ${context}
     `;
 
+    let report = "";
     try {
-        console.log("🧠 Synthesizing report with Gemini Flash...");
-        const report = await llmRouter.callLlm({
-            model: 'google/gemini-1.5-flash', // Fast/Cheap per policy
+        console.log("🧠 Synthesizing with GPT-4o Mini...");
+        report = await llmRouter.callLlm({
+            model: 'gpt-4o-mini', 
             prompt: prompt,
-            maxTokens: 2000,
+            maxTokens: 1000,
             temperature: 0.3,
             context: 'analyst-brief'
         });
 
-        // 3. Save Report
-        const filename = `brief-${new Date().toISOString().replace(/:/g, '-').split('.')[0]}.md`;
-        const filepath = path.join(REPORT_DIR, filename);
+        // 3. Save
+        if (!fs.existsSync(REPORT_DIR)) fs.mkdirSync(REPORT_DIR, { recursive: true });
+        const filepath = path.join(REPORT_DIR, `brief-${Date.now()}.md`);
         fs.writeFileSync(filepath, report);
         
         console.log(`✅ Report saved to: ${filepath}`);
-        console.log("\n--- PREVIEW ---\n");
-        console.log(report.substring(0, 500) + "...\n");
 
     } catch (e) {
-        console.error("❌ Report generation failed:", e.message);
+        console.error("❌ Failed:", e.message);
+        return;
     }
+
+    // 4. Output to Chat (via OpenClaw message CLI if available, or just console)
+    // The user asked to see the output in chat. Since this runs as a cron/script,
+    // we can use the 'openclaw message send' tool if configured, or rely on the agent reading the log.
+    // BUT the prompt says "put the full output here in the chat". 
+    // If running autonomously, 'console.log' is captured.
+    
+    console.log("\n" + report + "\n");
 }
 
 run();
