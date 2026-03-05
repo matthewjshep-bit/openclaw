@@ -25,7 +25,15 @@ trap "rm -f $PID_FILE" EXIT
 
 echo "--- Sync Started: $(date) ---" >> "$LOG_FILE"
 
-# 1. Pull Latest
+# 1. Add & Commit (First) to allow clean rebase
+git add . >> "$LOG_FILE" 2>&1
+if git diff-index --quiet HEAD --; then
+    echo "No local changes to commit." >> "$LOG_FILE"
+else
+    git commit -m "Auto-sync: $(date)" >> "$LOG_FILE" 2>&1
+fi
+
+# 2. Pull Latest
 git pull --rebase >> "$LOG_FILE" 2>&1
 if [ $? -ne 0 ]; then
     echo "❌ Pull failed. Conflict?" >> "$LOG_FILE"
@@ -34,27 +42,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 2. Add Changes
-# Only add specific file types to avoid junk
-git add . >> "$LOG_FILE" 2>&1
-
-# 3. Commit
-if git diff-index --quiet HEAD --; then
-    echo "No changes to commit." >> "$LOG_FILE"
-else
-    git commit -m "Auto-sync: $(date)" >> "$LOG_FILE" 2>&1
-    if [ $? -ne 0 ]; then
-         echo "❌ Commit failed (pre-commit hook blocked?)." >> "$LOG_FILE"
-         exit 1
-    fi
-    
-    # 4. Push
-    git push >> "$LOG_FILE" 2>&1
-    if [ $? -ne 0 ]; then
-        echo "❌ Push failed." >> "$LOG_FILE"
-        exit 1
-    fi
-    echo "✅ Changes pushed." >> "$LOG_FILE"
+# 3. Push
+git push >> "$LOG_FILE" 2>&1
+if [ $? -ne 0 ]; then
+    echo "❌ Push failed." >> "$LOG_FILE"
+    exit 1
 fi
+echo "✅ Changes pushed." >> "$LOG_FILE"
 
 echo "--- Sync Complete: $(date) ---" >> "$LOG_FILE"

@@ -1,5 +1,3 @@
-# HEARTBEAT.md
-
 # Security Audit (Nightly)
 - Run `node scripts/security_scanner.js --audit-system` once per day.
 
@@ -18,3 +16,11 @@
 
 # Analyst Briefings (2x Daily)
 - Run `node scripts/analyst_daily_brief.js` at 9:00 AM and 5:00 PM.
+
+# Morning Brief (Daily)
+- At 8:00 AM, send the following report via Telegram:
+  1. News stories relevant to Matt's interests (AI, startups, tech)
+2. Today's Todoist tasks
+3. Current weather forecast for the day
+  2. Today's tasks from Matt's to-do list
+  3. Recommendations for tasks I can complete today

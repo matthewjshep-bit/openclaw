@@ -6,11 +6,11 @@
 - **Age:** 34
 - **Location:** Seattle, WA
 - **Timezone:** America/Los_Angeles (derived from location)
-- **Profession:** Founder, PRVT MK (Tech Sales veteran - 12 years in Private Equity/Tech)
+- **Profession:** Founder, PRVT MKT (Tech Sales veteran - 12 years in Private Equity/Tech)
 
 ## Context
 
-- **Company:** **PRVT MK** (Private Market)
+- **Company:** **PRVT MKT** (Private Market)
   - **Mission:** Verticalized software platform for Private Equity & Real Estate firms to govern/deploy Agentic AI.
   - **Core Idea:** Transforms team directories into a hierarchy of Markdown-based "Agent Roles."
   - **Goal:** Centralized control hub for mapping workflows and codifying institutional knowledge.
